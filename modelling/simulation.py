@@ -21,10 +21,10 @@ def get_protocol(prot_name):
     """
     Returns the protocol in myokit format
     """
-    # if prot_name not in ['ramp', 'step', 'staircase', 'Milnes']:
-    #     raise ValueError(
-    #         "Choice of protocol must be either 'ramp', 'step', 'staircase' "
-    #         "or 'Milnes'.")
+    if prot_name not in ['ramp', 'step', 'staircase', 'Milnes']:
+        raise ValueError(
+            "Choice of protocol must be either 'ramp', 'step', 'staircase' "
+            "or 'Milnes'.")
     prot_dir = os.path.join(modelling.MAIN_DIR, 'models', 'protocols')
     return myokit.load_protocol(os.path.join(prot_dir, f'{prot_name}.mmt'))
 
