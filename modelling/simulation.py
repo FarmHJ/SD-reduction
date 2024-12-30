@@ -2,6 +2,7 @@
 # concentration.
 import myokit
 import os
+import pandas as pd
 
 import modelling
 
@@ -48,6 +49,8 @@ class ModelSimController(object):
 
         # Load model
         self.model = myokit.load_model(IKrmodel_mmt(model_name))
+        if model_name == 'Li-SD':
+            self.param_names = ['Kmax', 'Ku', 'halfmax', 'n', 'Vhalf']
 
         # parameters
         self._parameters = {}
@@ -115,12 +118,81 @@ class ModelSimController(object):
                     vp)
             """)
 
+    def set_drug_parameters(self, drug, binding_model='SD'):
+        params = pd.read_csv(os.path.join(modelling.PARAM_DIR,
+                                          f'Li-{binding_model}.csv'),
+                             index_col=0)
+        SD_params = params.loc[[drug]]
+
+        if 'Cmax' in SD_params.columns:
+            SD_params = SD_params.drop(columns=['Cmax'])
+        elif 'error' in SD_params.columns:
+            SD_params = SD_params.drop(columns=['error'])
+        SD_params = SD_params.to_dict(orient='index')[drug]
+
+        self.set_parameters(SD_params)
+
+    def set_parameters(self, param_input, set_Kt=True):
+
+        if set_Kt:
+            param_input['Kt'] = 3.5e-5
+
+        dict_contents = list(param_input.items())
+        param_dict = {f"{self.ikr_key_head}.{k}": content
+                      for k, content in dict_contents}
+
+        self._parameters.update(param_dict)
+
+    def reset_parameters(self):
+        param_dict = {}
+        for k in self.param_names + ['Kt', 'gKr']:
+            param_dict[self.ikr_key_head + '.' + k] = \
+                self.model.get(self.ikr_component.var(k)).eval()
+
+        self._parameters.update(param_dict)
+        del param_dict
+
+    def get_parameters(self):
+        return self._parameters
+
+    def set_conc(self, concentration):
+        if concentration < 0:
+            ValueError('Drug concentration is lower than 0.')
+        self._conc = float(concentration)
+
+        param_dict = {self.ikr_key_head + '.D': self._conc}
+        self._parameters.update(param_dict)
+
+    def _set_parameters(self):
+        """
+        Set the parameter values
+        """
+        for p in self._parameters.keys():
+            self.sim.set_constant(p, self._parameters[p])
+
     def set_initial_state(self, states):
         self.initial_state = states
+
+    def update_initial_state(self, paces=1000):
+        """
+        Mainly to simulate till steady state for drug-free conditions
+        """
+
+        # Update fixed parameters
+        self._set_parameters()
+
+        # Ensure initial condition
+        self.sim.reset()
+        self.sim.set_state(self.initial_state)
+
+        for _ in range(paces):
+            self.sim.pre(self._cl)
+        self.initial_state = self.sim.state()
 
     def simulate(self, prepace=1000, save_signal=1, timestep=0.1,
                  log_var=None, reset=True, log_times=None):
 
+        self._set_parameters()
         self.prepace = prepace
 
         self.sim.set_time(0)
