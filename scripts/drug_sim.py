@@ -23,15 +23,13 @@ axs = [[[fig.add_subplot(subgs[k][i, j]) for j in range(
          subgridspecs[1])] for i in range(subgridspecs[0])]
        for k in range(4)]
 
-results_dir = os.path.join(modelling.PARAM_DIR, 'control_states', model)
-if not os.path.isdir(results_dir):
-    os.makedirs(results_dir)
+data_dir = os.path.join(modelling.PARAM_DIR, 'control_states', model)
 
 for p, prot in enumerate(protocol_list):
     sim = modelling.ModelSimController(model, prot)
 
     log = myokit.DataLog.load_csv(
-        os.path.join(results_dir, f'control_log_{prot}.csv'))
+        os.path.join(data_dir, f'control_log_{prot}.csv'))
 
     # Plot control condition
     if p == 0:
@@ -45,12 +43,12 @@ for p, prot in enumerate(protocol_list):
 
     # Simulate drug condition
     control_state = myokit.load_state(
-        os.path.join(results_dir, f'control_state_{prot}.csv'))
+        os.path.join(data_dir, f'control_state_{prot}.csv'))
     sim.initial_state = control_state
     sim.set_drug_parameters('dofetilide')
     sim.set_conc(10)
     sim.update_initial_state(paces=0)
-    log = sim.simulate(prepace=0)
+    log = sim.simulate()
 
     # Plot drug condition
     if p == 0:
