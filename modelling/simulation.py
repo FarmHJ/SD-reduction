@@ -1,6 +1,7 @@
 # Difference in simulation results is due to the formulation of drug
 # concentration.
 import myokit
+import numpy as np
 import os
 import pandas as pd
 
@@ -119,6 +120,7 @@ class ModelSimController(object):
             """)
 
     def set_drug_parameters(self, drug, binding_model='SD'):
+
         params = pd.read_csv(os.path.join(modelling.PARAM_DIR,
                                           f'Li-{binding_model}.csv'),
                              index_col=0)
@@ -161,6 +163,22 @@ class ModelSimController(object):
         self._conc = float(concentration)
 
         param_dict = {self.ikr_key_head + '.D': self._conc}
+        self._parameters.update(param_dict)
+
+    def convert_dimless_conc(self, halfmax, Hill):
+        Dn = np.power(self._conc, Hill)
+        return Dn / (Dn + halfmax)
+
+    def set_dimless_conc(self, dimless_conc):
+        if dimless_conc < 0 or dimless_conc >= 1:
+            ValueError('Dimensionless concentration is lower than 0 or higher'
+                       ' than 1.')
+        self._dimless_conc = dimless_conc
+        self._conc = self._dimless_conc / (1 - self._dimless_conc)
+
+        param_dict = {f'{self.ikr_key_head}.D': self._conc,
+                      f'{self.ikr_key_head}.halfmax': 1,
+                      f'{self.ikr_key_head}.n': 1}
         self._parameters.update(param_dict)
 
     def _set_parameters(self):
