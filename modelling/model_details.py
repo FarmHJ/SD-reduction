@@ -22,3 +22,5 @@ lit_drug_conc = {
     'ondansetron': [300, 1000, 3000, 1e4],
     'diltiazem': [3000, 1e4, 3e4, 1e5],
     'mexiletine': [1e4, 3e4, 1e5, 3e5]}
+
+dimless_conc_range = (10**-8, 0.65)
