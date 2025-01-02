@@ -35,15 +35,23 @@ for p, prot in enumerate(protocol_list):
     myokit.save_state(os.path.join(results_dir, f'control_state_{prot}.csv'),
                       control_state)
 
-    # Create figure for stimulus protocols only
     if p == 0:
         axs[p][0][0].plot(log.time() / 1e3, log[sim.Vm_key], 'k', zorder=5)
         axs[p][1][0].plot(log.time() / 1e3, log[sim.ikr_key], 'k', zorder=5)
-        axs[p][1][0].set_xlabel('Time (s)')
-        axs[p][0][0].set_xlim(0, max(log.time() / 1e3))
     else:
         axs[p][0][0].plot(log.time(), log[sim.Vm_key], 'k', zorder=5)
         axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'k', zorder=5)
+
+    log = sim.simulate(timestep=10)
+    log.save_csv(os.path.join(results_dir, f'control_log_{prot}_dt10.csv'))
+
+    # Create figure for stimulus protocols only
+    if p == 0:
+        axs[p][1][0].plot(log.time() / 1e3, log[sim.ikr_key], 'r--', zorder=5)
+        axs[p][1][0].set_xlabel('Time (s)')
+        axs[p][0][0].set_xlim(0, max(log.time() / 1e3))
+    else:
+        axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'r--', zorder=5)
         axs[p][1][0].set_xlabel('Time (ms)')
         axs[p][0][0].set_xlim(0, max(log.time()))
     # panel_protocol.set_ylabel('Voltage (mV)')
