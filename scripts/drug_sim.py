@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import myokit
 import numpy as np
 import os
+import pandas as pd
 
 import modelling
 
@@ -42,9 +43,7 @@ for p, prot in enumerate(protocol_list):
         axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'k', zorder=5)
 
     # Simulate drug condition
-    control_state = myokit.load_state(
-        os.path.join(data_dir, f'control_state_{prot}.csv'))
-    sim.initial_state = control_state
+    sim.load_control_state()
     sim.set_drug_parameters('dofetilide')
     sim.set_conc(10)
     sim.update_initial_state(paces=0)
@@ -72,5 +71,35 @@ for p, prot in enumerate(protocol_list):
 
 # Save protocol figure
 fig.savefig(os.path.join(modelling.FIG_DIR, 'sim-protocol-drug.png'),
+            bbox_inches='tight', dpi=500)
+plt.close()
+
+##########################
+# Drug concentration range
+##########################
+# Load drug parameters - training and validation
+param_names = modelling.model_details.param_names[model]
+
+params = pd.read_csv(os.path.join(modelling.PARAM_DIR, f'{model}.csv'),
+                     index_col=0)
+params_validate = pd.read_csv(os.path.join(modelling.PARAM_DIR, f'{model}-validation.csv'),
+                              index_col=0)
+params = pd.concat([params, params_validate])
+
+plt.rcParams.update({'font.size': 8})
+fig = plt.figure(figsize=(7, 3))
+gs = fig.add_gridspec(1, 5, wspace=0.78)
+axs = [fig.add_subplot(gs[0, j]) for j in range(5)]
+
+for p, name in enumerate(param_names):
+    axs[p].violinplot(params[name], showmeans=False, showmedians=True)
+    axs[p].set_title(name)
+    if name in ['Kmax', 'Ku', 'halfmax']:
+        axs[p].set_yscale('log')
+        axs[p].set_ylabel('(log)')
+    axs[p].tick_params(labelbottom=False)
+
+    print(name, min(params[name]), max(params[name]))
+fig.savefig(os.path.join(modelling.FIG_DIR, 'drug-param-dist.pdf'),
             bbox_inches='tight', dpi=500)
 plt.close()

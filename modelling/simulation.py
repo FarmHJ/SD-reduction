@@ -48,6 +48,8 @@ class ModelSimController(object):
     def __init__(self, model_name, protocol_name):
         super(ModelSimController, self).__init__()
 
+        self.model_name = model_name
+        self.protocol_name = protocol_name
         # Load model
         self.model = myokit.load_model(IKrmodel_mmt(model_name))
         if model_name == 'Li-SD':
@@ -118,6 +120,14 @@ class ModelSimController(object):
                     (engine.time >=14410 and engine.time < 14510), v2,
                     vp)
             """)
+
+    def load_control_state(self):
+        data_dir = os.path.join(modelling.PARAM_DIR, 'control_states',
+                                self.model_name)
+
+        control_state = myokit.load_state(
+            os.path.join(data_dir, f'control_state_{self.protocol_name}.csv'))
+        self.initial_state = control_state
 
     def set_drug_parameters(self, drug, binding_model='SD'):
 
