@@ -14,7 +14,7 @@ def IKrmodel_mmt(model):
     """
     IKrmodel_dir = os.path.join(modelling.MAIN_DIR, 'models', 'IKr_models')
     filenames = {
-        'Li-SD': 'li2016-SD.mmt'}
+        'Li-SD': 'Li-SD.mmt'}
 
     return os.path.join(IKrmodel_dir, filenames[model])
 
@@ -72,7 +72,6 @@ class ModelSimController(object):
 
         del protocol
 
-        self.model_name = model_name
         self.time_key = 'engine.time'
         self.ikr_key = 'ikr.IKr'
         self.Vm_key = 'membrane.V'
