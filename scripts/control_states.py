@@ -8,8 +8,8 @@ model = 'Li-SD'
 protocol_list = ['Milnes', 'ramp', 'step', 'staircase']
 
 plt.rcParams.update({'font.size': 8})
-fig = plt.figure(figsize=(8, 4.5))
-gs = fig.add_gridspec(2, 3, wspace=0.25, hspace=0.45, height_ratios=[2, 3])
+fig = plt.figure(figsize=(7, 4.5))
+gs = fig.add_gridspec(2, 3, wspace=0.05, hspace=0.45, height_ratios=[2, 3])
 
 subgridspecs = (2, 1)
 subgs = []
@@ -42,19 +42,20 @@ for p, prot in enumerate(protocol_list):
         axs[p][0][0].plot(log.time(), log[sim.Vm_key], 'k', zorder=5)
         axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'k', zorder=5)
 
-    log = sim.simulate(timestep=10)
-    log.save_csv(os.path.join(results_dir, f'control_log_{prot}_dt10.csv'))
+    # log = sim.simulate(timestep=10)
+    # log.save_csv(os.path.join(results_dir, f'control_log_{prot}_dt10.csv'))
 
     # Create figure for stimulus protocols only
     if p == 0:
-        axs[p][1][0].plot(log.time() / 1e3, log[sim.ikr_key], 'r--', zorder=5)
+        # axs[p][1][0].plot(log.time() / 1e3, log[sim.ikr_key], 'r--', zorder=5)
         axs[p][1][0].set_xlabel('Time (s)')
         axs[p][0][0].set_xlim(0, max(log.time() / 1e3))
+        axs[p][0][0].set_ylabel('Voltage (mV)')
+        axs[p][1][0].set_ylabel('Current (A/F)')
     else:
-        axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'r--', zorder=5)
+        # axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'r--', zorder=5)
         axs[p][1][0].set_xlabel('Time (ms)')
         axs[p][0][0].set_xlim(0, max(log.time()))
-    # panel_protocol.set_ylabel('Voltage (mV)')
     axs[p][1][0].sharex(axs[p][0][0])
     axs[p][0][0].tick_params(labelbottom=False)
     axs[p][0][0].set_title(prot)
@@ -62,9 +63,15 @@ for p, prot in enumerate(protocol_list):
     if p != 3:
         axs[p][1][0].set_ylim(-0.03, 1)
         axs[p][1][0].set_yticks([0, 0.5, 1])
+        if p != 0:
+            axs[p][0][0].tick_params(labelleft=False)
+            axs[p][1][0].tick_params(labelleft=False)
     axs[p][0][0].grid(linestyle='--')
     axs[p][1][0].grid(linestyle='--')
     axs[p][0][0].set_yticks([-100, -50, 0, 50])
+
+axs[3][0][0].set_ylabel('Voltage (mV)')
+axs[3][1][0].set_ylabel('Current (A/F)')
 
 # Save protocol figure
 fig.savefig(os.path.join(modelling.FIG_DIR, 'sim-protocol.png'),
