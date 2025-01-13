@@ -35,7 +35,7 @@ def protocol_period(prot_name):
     # (protocol start time, protocol period of interest,
     # protocol time delay for plot)
     prot_time = {
-        'Milnes': (1005 + 100, 10000 - 100, 60)}  # remove peak
+        'Milnes': (1000 + 100, 10000 - 100, 70)}  # remove peak
 
     return prot_time[prot_name]
 
@@ -254,3 +254,17 @@ class ModelSimController(object):
             log = log.fold(self._cl)
 
         return log
+
+    def add_noise(self, log, noise_std):
+        pulses = len(log.keys_like(self.ikr_key))
+
+        if pulses == 0:
+            log[self.ikr_key] += np.random.normal(loc=0, scale=noise_std,
+                                                  size=log.length())
+        else:
+            for i in range(pulses):
+                log[self.ikr_key, i] += np.random.normal(
+                    loc=0, scale=noise_std, size=log.length())
+
+        return log
+    

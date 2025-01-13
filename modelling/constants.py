@@ -20,3 +20,6 @@ del(os, inspect, frame)
 
 ABS_TOL = 1e-7
 REL_TOL = 1e-8
+
+# Estimated noise level from experimental data
+noise_level = 6.6e-6  # uA

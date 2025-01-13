@@ -42,8 +42,8 @@ for p, prot in enumerate(protocol_list):
         axs[p][0][0].plot(log.time(), log[sim.Vm_key], 'k', zorder=5)
         axs[p][1][0].plot(log.time(), log[sim.ikr_key], 'k', zorder=5)
 
-    # log = sim.simulate(timestep=10)
-    # log.save_csv(os.path.join(results_dir, f'control_log_{prot}_dt10.csv'))
+    log = sim.simulate(timestep=10)
+    log.save_csv(os.path.join(results_dir, f'control_log_{prot}_dt10.csv'))
 
     # Create figure for stimulus protocols only
     if p == 0:
