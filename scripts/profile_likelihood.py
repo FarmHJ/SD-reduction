@@ -10,7 +10,8 @@ import modelling
 # Define model and protocol
 model = 'Li-SD'
 protocol = 'Milnes'
-results_dir = os.path.join(modelling.PARAM_DIR, model, protocol)
+results_dir = os.path.join(modelling.PARAM_DIR, model, protocol,
+                           'profile_likelihood')
 
 # Define list of drugs (for ground truth parameter), parameter, their
 # exploration range and dimensionless concentration range
@@ -23,6 +24,24 @@ ranges = {
     'Vhalf': np.linspace(-200, -1, grid),
     'Kt': 10**np.linspace(-5, 8, grid)}
 dimless_conc = np.array([10 ** i for i in np.linspace(-8, np.log10(0.65), 4)])
+
+# Extension to grid
+# dofetilide
+drug_list = ['cisapride']
+delta_Kmax = np.linspace(0, 8, grid)[1]
+delta_Ku = np.linspace(np.log10(1.8e-5), 0, grid)[-2]
+# ranges = {
+#     'Kmax': 10**(8 + np.arange(1, 5) * delta_Kmax),
+#     'Ku': 10**(np.log10(1.8e-5) + np.arange(4, 0, -1) * delta_Ku),
+#     'Vhalf': np.array([-0.75, -0.5, -0.25, 0])}
+# cisapride
+# boundary in optimisation of Vhalf for cisapride is adjusted to [-300, 0]
+delta = np.mean(ranges['Vhalf'][1:] - ranges['Vhalf'][:-1])
+ranges = {
+    'Kmax': 10**(8 + np.arange(1, 5) * delta_Kmax),
+    'Ku': 10**(np.log10(1.8e-5) + np.arange(4, 0, -1) * delta_Ku),
+    'Vhalf': -200 - np.arange(1, 5) * delta
+}
 
 
 # Define PINTS model to run optimisation for profile likelihood
@@ -76,7 +95,7 @@ class InfModel(pints.ForwardModel):
 # optimisation
 boundaries_dict = {'Kmax': (1e-1, 1e10),
                    'Ku': (1e-8, 1e1),
-                   'Vhalf': (-200, 0)}
+                   'Vhalf': (-300, 0)}
 transform_dict = {'Kmax': pints.LogTransformation(1),
                   'Ku': pints.LogTransformation(1),
                   'Vhalf': pints.IdentityTransformation(1)}
@@ -151,7 +170,7 @@ for drug in drug_list:
         error_fn = pints.SumOfErrors(
             errors, [1 / len(dimless_conc)] * len(dimless_conc))
 
-        # Define parameter transformation 
+        # # Define parameter transformation
         transform_list = [transform_dict[name] for name in inferring_params]
         transform = pints.ComposedTransformation(*transform_list)
 
@@ -171,6 +190,7 @@ for drug in drug_list:
                                            transformation=transform,
                                            method=pints.CMAES)
         # opt.set_log_to_screen(False)
+        # opt.set_max_iterations(5)
         opt.set_parallel(True)
         opt_param_main, s = opt.run()
         print('optimised: ', opt_param_main)
@@ -188,6 +208,8 @@ for drug in drug_list:
         low_ranges = ranges[p][:split_idx]
         up_ranges = ranges[p][split_idx:]
 
+        # print(low_ranges)
+        # print(up_ranges)
         # Run the optimisation from actual parameter value to larger values
         # Repeat the optimisation with initial guess as previous optimised
         # values
@@ -222,6 +244,7 @@ for drug in drug_list:
                                                transformation=transform,
                                                method=pints.CMAES)
             # opt.set_log_to_screen(False)
+            # opt.set_max_iterations(5)
             opt.set_parallel(True)
             opt_param, s = opt.run()
             print('optimised ', opt_param)
@@ -247,7 +270,8 @@ for drug in drug_list:
             error_fn = pints.SumOfErrors(
                 errors, [1 / len(dimless_conc)] * len(dimless_conc))
 
-            transform_list = [transform_dict[name] for name in inferring_params]
+            transform_list = [transform_dict[name] for name
+                              in inferring_params]
             transform = pints.ComposedTransformation(*transform_list)
 
             # Take initial guess as optimised parameter value of previous run
@@ -264,6 +288,7 @@ for drug in drug_list:
                                                transformation=transform,
                                                method=pints.CMAES)
             # opt.set_log_to_screen(False)
+            # opt.set_max_iterations(5)
             opt.set_parallel(True)
             opt_param, s = opt.run()
             print('optimised: ', opt_param)
@@ -276,7 +301,8 @@ for drug in drug_list:
         profile_likelihood[p] = param_list
         profile_likelihood[f'likelihood_{p}'] = error_list
 
+    print(profile_likelihood)
     # Save profile likelihood
     pd.DataFrame.from_dict(profile_likelihood).to_csv(
         os.path.join(results_dir,
-                     f'profilelikelihood_{drug}_Milnes_exp.csv'))
+                     f'profilelikelihood_{drug}_Milnes_exp_ext.csv'))
