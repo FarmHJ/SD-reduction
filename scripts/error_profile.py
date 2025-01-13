@@ -13,6 +13,7 @@ protocol = 'Milnes'
 # Define list of drugs (for ground truth parameter), parameter and their
 # exploration range
 drug_list = ['dofetilide', 'cisapride', 'verapamil']
+# drug_list = ['quinidine']
 param_names = ['Kmax', 'Ku', 'Vhalf', 'Kt']
 ranges = {
     'Kmax': 10**np.linspace(0, 8, 20),
@@ -23,15 +24,18 @@ ranges = {
 ##############
 # Ideal set up
 ##############
-# Ideal set up is till steady state, 0.1 ms time step and full Milnes protocol
+# # Ideal set up is till steady state, 0.1 ms time step and full Milnes protocol
 print('Difference profile for ideal set up')
 
-# Define recording timestep and drug concentration
+# # Define recording timestep and drug concentration
 log_times = np.arange(0, 25e3, 0.1)
 dimless_conc = np.array([10 ** i for i in np.linspace(-8, np.log10(0.65), 4)])
 
 # Load control data for computation of fractional block
-results_dir = os.path.join(modelling.PARAM_DIR, model, protocol)
+results_dir = os.path.join(modelling.PARAM_DIR, model, protocol,
+                           'error_profile')
+if not os.path.isdir(results_dir):
+    os.makedirs(results_dir)
 control_log_file = os.path.join(modelling.PARAM_DIR, 'control_states',
                                 model, f'control_log_{protocol}.csv')
 control_log = myokit.DataLog.load_csv(control_log_file)
@@ -118,7 +122,7 @@ control_log_win = control_log.trim(prot_start, prot_start + prot_period)
 sweep_num = 10
 
 for drug in drug_list:
-    print('Computing error profile for ', drug)
+    print('Computing error profile for', drug)
 
     # Simulate fractional block for optimised parameter combination (CiPA drug)
     sim = modelling.ModelSimController(model, protocol)
