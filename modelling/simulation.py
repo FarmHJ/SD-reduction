@@ -267,4 +267,3 @@ class ModelSimController(object):
                     loc=0, scale=noise_std, size=log.length())
 
         return log
-    
