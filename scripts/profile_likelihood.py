@@ -16,7 +16,8 @@ results_dir = os.path.join(modelling.PARAM_DIR, model, protocol,
 # Define list of drugs (for ground truth parameter), parameter, their
 # exploration range and dimensionless concentration range
 drug_list = ['dofetilide', 'cisapride', 'verapamil']
-param_names = ['Kmax', 'Ku', 'Vhalf']
+param_names = ['Kmax', 'Ku', 'Vhalf', 'Kt']
+param_interest = ['Kt']
 grid = 20
 ranges = {
     'Kmax': 10**np.linspace(0, 8, grid),
@@ -27,21 +28,21 @@ dimless_conc = np.array([10 ** i for i in np.linspace(-8, np.log10(0.65), 4)])
 
 # Extension to grid
 # dofetilide
-drug_list = ['cisapride']
-delta_Kmax = np.linspace(0, 8, grid)[1]
-delta_Ku = np.linspace(np.log10(1.8e-5), 0, grid)[-2]
+# drug_list = ['cisapride']
+# delta_Kmax = np.linspace(0, 8, grid)[1]
+# delta_Ku = np.linspace(np.log10(1.8e-5), 0, grid)[-2]
+# # ranges = {
+# #     'Kmax': 10**(8 + np.arange(1, 5) * delta_Kmax),
+# #     'Ku': 10**(np.log10(1.8e-5) + np.arange(4, 0, -1) * delta_Ku),
+# #     'Vhalf': np.array([-0.75, -0.5, -0.25, 0])}
+# # cisapride
+# # boundary in optimisation of Vhalf for cisapride is adjusted to [-300, 0]
+# delta = np.mean(ranges['Vhalf'][1:] - ranges['Vhalf'][:-1])
 # ranges = {
 #     'Kmax': 10**(8 + np.arange(1, 5) * delta_Kmax),
 #     'Ku': 10**(np.log10(1.8e-5) + np.arange(4, 0, -1) * delta_Ku),
-#     'Vhalf': np.array([-0.75, -0.5, -0.25, 0])}
-# cisapride
-# boundary in optimisation of Vhalf for cisapride is adjusted to [-300, 0]
-delta = np.mean(ranges['Vhalf'][1:] - ranges['Vhalf'][:-1])
-ranges = {
-    'Kmax': 10**(8 + np.arange(1, 5) * delta_Kmax),
-    'Ku': 10**(np.log10(1.8e-5) + np.arange(4, 0, -1) * delta_Ku),
-    'Vhalf': -200 - np.arange(1, 5) * delta
-}
+#     'Vhalf': -200 - np.arange(1, 5) * delta
+# }
 
 
 # Define PINTS model to run optimisation for profile likelihood
@@ -95,10 +96,12 @@ class InfModel(pints.ForwardModel):
 # optimisation
 boundaries_dict = {'Kmax': (1e-1, 1e10),
                    'Ku': (1e-8, 1e1),
-                   'Vhalf': (-300, 0)}
+                   'Vhalf': (-300, 0),
+                   'Kt': (1e-7, 1e10)}
 transform_dict = {'Kmax': pints.LogTransformation(1),
                   'Ku': pints.LogTransformation(1),
-                  'Vhalf': pints.IdentityTransformation(1)}
+                  'Vhalf': pints.IdentityTransformation(1),
+                  'Kt': pints.LogTransformation(1)}
 
 #####################
 # Experimental set up
@@ -127,6 +130,7 @@ for drug in drug_list:
     # Load parameters of CiPA drugs
     param_drug = params.loc[[drug]]
     param_drug = param_drug.to_dict(orient='index')[drug]
+    param_drug.update({'Kt': 3.5e-5})
 
     # Instantiate dictionary to save profile likelihood outcome
     profile_likelihood = {}
@@ -152,12 +156,13 @@ for drug in drug_list:
         ref_log_conc.append(ref_frac_block)
 
     # profile likelihood for each parameter of interest
-    for n, p in enumerate(param_names):
+    for n, p in enumerate(param_interest):
         sim.reset_parameters()
         sim.set_drug_parameters(drug)
 
         # Get parameters that are not fixed, and to be inferred
         inferring_params = [i for i in param_names if i != p]
+        print(inferring_params)
 
         # Define inference problem
         errors = []
@@ -305,4 +310,4 @@ for drug in drug_list:
     # Save profile likelihood
     pd.DataFrame.from_dict(profile_likelihood).to_csv(
         os.path.join(results_dir,
-                     f'profilelikelihood_{drug}_Milnes_exp_ext.csv'))
+                     f'profilelikelihood_{drug}_Milnes_exp_Kt.csv'))
