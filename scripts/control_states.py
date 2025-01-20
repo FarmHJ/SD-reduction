@@ -4,7 +4,7 @@ import os
 
 import modelling
 
-model = 'Li-SD'
+model = 'Li-D'
 protocol_list = ['Milnes', 'ramp', 'step', 'staircase']
 
 plt.rcParams.update({'font.size': 8})
@@ -74,6 +74,6 @@ axs[3][0][0].set_ylabel('Voltage (mV)')
 axs[3][1][0].set_ylabel('Current (A/F)')
 
 # Save protocol figure
-fig.savefig(os.path.join(modelling.FIG_DIR, 'sim-protocol.png'),
+fig.savefig(os.path.join(modelling.FIG_DIR, 'sim-protocol-D.png'),
             bbox_inches='tight', dpi=500)
 plt.close()
