@@ -9,7 +9,7 @@ import modelling
 # Define model and protocol
 model = 'Li-SD'
 protocol = 'staircase'
-prot_mode = 'full'
+prot_mode = 'partial'
 grid = 20
 
 # Define list of drugs (for ground truth parameter), parameter and their
@@ -38,7 +38,7 @@ if not os.path.isdir(results_dir):
 # step and Milnes protocol at 0mV
 
 # Define time period of interest within the protocol (for 10 pulses)
-sweep_num = 1
+sweep_num = 5
 _, prot_length, _ = modelling.simulation.protocol_period(protocol, mode='full')
 
 prot_start, prot_period, _ = modelling.simulation.protocol_period(protocol,
@@ -63,6 +63,7 @@ for drug in drug_list:
     # Simulate fractional block for optimised parameter combination (CiPA drug)
 
     sim.set_drug_parameters(drug)
+    print(sim.get_parameters())
     ref_log_conc = []
     for c in dimless_conc:
         sim.update_initial_state(paces=0)
@@ -73,7 +74,7 @@ for drug in drug_list:
                                reset=False)
 
         if sweep_num == 1:
-            ref_frac_block = ref_log[sim.ikr_key]
+            ref_frac_block = ref_log[sim.ikr_key] / control_log_win[sim.ikr_key]
         else:
             ref_frac_block = []
             for s in range(sweep_num):
@@ -100,7 +101,6 @@ for drug in drug_list:
 
             error_conc_list = []
             for c, conc in enumerate(dimless_conc):
-                print(conc)
                 sim.update_initial_state(paces=0)
                 sim.set_dimless_conc(conc)
                 log = sim.simulate(prepace=0, save_signal=sweep_num,
@@ -110,7 +110,7 @@ for drug in drug_list:
 
                 # Compute and compile fractional block data
                 if sweep_num == 1:
-                    frac_block = log[sim.ikr_key]
+                    frac_block = log[sim.ikr_key] / control_log_win[sim.ikr_key]
                 else:
                     frac_block = []
                     for s in range(sweep_num):
@@ -130,4 +130,4 @@ for drug in drug_list:
     # Save computed error profile
     pd.DataFrame.from_dict(error_list).to_csv(
         os.path.join(results_dir,
-                     f'errorprofile_{drug}_{protocol}_{prot_mode}_pulses1_raw.csv'))
+                     f'errorprofile_{drug}_{protocol}_{prot_mode}_pulses5_xramp.csv'))
