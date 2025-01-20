@@ -14,6 +14,7 @@ model = 'Li-SD'
 protocol = 'Milnes'
 param_names = ['Kmax', 'Ku', 'Vhalf']
 setup = 'exp'  # 'exp' for experimental setup and 'ideal' for ideal setup
+prot_mode = 'partial'
 
 grid = 5
 
@@ -26,7 +27,7 @@ of data
 Experimental setup - first 10 pulses after addition of drug, time step at 10
 ms, only 0 mV step of the Miles protocol is used
 """
-results_dir = os.path.join(modelling.PARAM_DIR, model, protocol)
+results_dir = os.path.join(modelling.PARAM_DIR, model, protocol, 'syn_data')
 if not os.path.isdir(results_dir):
     os.makedirs(results_dir)
 
@@ -85,11 +86,14 @@ if setup == 'exp':
     sweep_num = 10
     prepace = 0
 
-    prot_start, prot_period, _ = modelling.simulation.protocol_period(protocol)
+    _, prot_length, _ = modelling.simulation.protocol_period(protocol, mode='full')
+
+    prot_start, prot_period, _ = modelling.simulation.protocol_period(protocol,
+                                                                      mode=prot_mode)
     general_win = np.arange(prot_start, prot_start + prot_period, 10)
     log_times = []
     for i in range(sweep_num):
-        log_times.extend(general_win + 25e3 * i)
+        log_times.extend(general_win + prot_length * i)
 
     control_log_file = os.path.join(modelling.PARAM_DIR, 'control_states',
                                     model, f'control_log_{protocol}_dt10.csv')
@@ -116,10 +120,12 @@ sim = modelling.ModelSimController(model, protocol)
 sim.load_control_state()
 
 np.random.seed(0)
-control_log_win_noise = sim.add_noise(control_log_win, modelling.noise_level * 1e3)
+control_log_win_noise = sim.add_noise(control_log_win, modelling.noise_level * 1e3,
+                                      scale=0.5)
+# control_log_win_noise = sim.add_noise(control_log_win, 0)
 # 1e3 to adjust for order of magnitude
 control_log_win_noise.save_csv(os.path.join(
-    results_dir, f'control_log_{protocol}_noise_trimmed.csv'))
+    results_dir, f'control_log_{protocol}_noise_scale5_trimmed.csv'))
 
 # Define drug concentration range for synthetic data
 dimless_conc = np.array([10 ** i for i in np.linspace(-8, np.log10(0.65), 4)])
@@ -185,78 +191,80 @@ for p_num, param in enumerate(param_dict_list):
 
         # Plot noisy synthetic data
         if p_num in sample:
-            log.save_csv(os.path.join(
-                results_dir, f'log_{protocol}_noise_{int(p_num)}_conc{c}.csv'))
+            # log.save_csv(os.path.join(
+            #     results_dir, f'log_{protocol}_noise_{int(p_num)}_conc{c}.csv'))
 
             r, c = int(count / 2), count % 2
             axs[r][c].plot(SD_frac_block)
-            axs[r][c].set_ylim(-0.05, 1.05)
+            # axs[r][c].set_ylim(-0.05, 1.05)
 
     if p_num in sample:
         count += 1
 
-        # Instantiate forward model
-        inf_model = InfModel(sim)
-        inf_model.set_conc(c)
-        # Create single output problem
-        problem = pints.SingleOutputProblem(inf_model, log_times,
-                                            SD_frac_block)
+#         # Instantiate forward model
+#         inf_model = InfModel(sim)
+#         inf_model.set_conc(conc)
+#         # Create single output problem
+#         problem = pints.SingleOutputProblem(inf_model, log_times,
+#                                             SD_frac_block)
 
-        # Error function
-        errors.append(pints.RootMeanSquaredError(problem))
+#         # Error function
+#         errors.append(pints.RootMeanSquaredError(problem))
 
-    error_fn = pints.SumOfErrors(errors,
-                                 [1 / len(dimless_conc)] * len(dimless_conc))
-    # Transform parameters
-    transform = pints.ComposedTransformation(
-        pints.LogTransformation(error_fn.n_parameters() - 1),
-        pints.IdentityTransformation(1))
+#     error_fn = pints.SumOfErrors(errors,
+#                                  [1 / len(dimless_conc)] * len(dimless_conc))
+#     # Transform parameters
+#     transform = pints.ComposedTransformation(
+#         pints.LogTransformation(error_fn.n_parameters() - 1),
+#         pints.IdentityTransformation(1))
 
-    # Perform inference
-    reps = 5
-    param_scores = []
-    for i in range(reps):
-        # Generate initial guess from prior distribution
-        np.random.seed((i + 1) * 100)
-        guess = [p.sample()[0][0] for p in prior_list]
-        # Prior for Vhalf
-        guess.append(np.random.uniform(-150, 0))
-        print('initial guess: ', guess)
+#     # Perform inference
+#     reps = 5
+#     param_scores = []
+#     for i in range(reps):
+#         # Generate initial guess from prior distribution
+#         np.random.seed((i + 1) * 100)
+#         guess = [p.sample()[0][0] for p in prior_list]
+#         # Prior for Vhalf
+#         guess.append(np.random.uniform(-150, 0))
+#         print('initial guess: ', guess)
 
-        # Run optimisation
-        opt = pints.OptimisationController(error_fn, guess,
-                                           boundaries=boundaries,
-                                           transformation=transform,
-                                           method=pints.CMAES)
-        # opt.set_log_to_screen(False)
-        opt.set_parallel(True)
-        opt_param, s = opt.run()
+#         # Run optimisation
+#         opt = pints.OptimisationController(error_fn, guess,
+#                                            boundaries=boundaries,
+#                                            transformation=transform,
+#                                            method=pints.CMAES)
+#         # opt.set_log_to_screen(False)
+#         opt.set_parallel(True)
+#         opt_param, s = opt.run()
 
-        # Save outcome
-        param_scores.append(list(opt_param) + [s])
+#         # Save outcome
+#         param_scores.append(list(opt_param) + [s])
 
-    # Organise and compile optimisation outcome
-    score_col = [f'fit_{i}' for i in param_names] + ['error']
-    scores_dict = pd.DataFrame(param_scores, columns=score_col)
-    scores_dict = scores_dict.sort_values(by=['error'])
+#     # Organise and compile optimisation outcome
+#     score_col = [f'fit_{i}' for i in param_names] + ['error']
+#     scores_dict = pd.DataFrame(param_scores, columns=score_col)
+#     scores_dict = scores_dict.sort_values(by=['error'])
 
-    # ref_col = [f'ref_{i}' for i in param_names]
-    param_dict = pd.DataFrame(param, index=[0])
-    col_rename = {i: f'ref_{i}' for i in param_names}
-    param_dict = param_dict.rename(columns=col_rename)
+#     # ref_col = [f'ref_{i}' for i in param_names]
+#     param_dict = pd.DataFrame(param, index=[0])
+#     col_rename = {i: f'ref_{i}' for i in param_names}
+#     param_dict = param_dict.rename(columns=col_rename)
 
-    param_scores = pd.concat([scores_dict.iloc[[0], :].reset_index(drop=True),
-                              param_dict], axis=1)
-    if p_num == 0:
-        combined_scores = param_scores
-    else:
-        combined_scores = pd.concat([combined_scores,
-                                     param_scores])
-    print(combined_scores)
+#     param_scores = pd.concat([scores_dict.iloc[[0], :].reset_index(drop=True),
+#                               param_dict], axis=1)
+#     if p_num == 0:
+#         combined_scores = param_scores
+#     else:
+#         combined_scores = pd.concat([combined_scores,
+#                                      param_scores])
+#     print(combined_scores)
 
-# Save all inference results
-combined_scores.to_csv(os.path.join(results_dir,
-                                    f'inference_Milnes_{setup}_noise.csv'))
+# # Save all inference results
+# combined_scores.to_csv(os.path.join(results_dir,
+#                                     f'inference_Milnes_{setup}_noise2.csv'))
+
+# Save figure
 fig_dir = os.path.join(modelling.FIG_DIR, 'syn_data', model, protocol)
-fig.savefig(os.path.join(fig_dir, 'syn-data-noisy.pdf'),
+fig.savefig(os.path.join(fig_dir, f'syn-data-{prot_mode}.pdf'),
             bbox_inches='tight')
