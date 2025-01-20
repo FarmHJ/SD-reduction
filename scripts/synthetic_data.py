@@ -116,33 +116,6 @@ fig_dir = os.path.join(modelling.FIG_DIR, 'syn_data', model, protocol)
 # fig.savefig(os.path.join(fig_dir, f'syn-data-{prot_mode}.pdf'),
 #             bbox_inches='tight')
 
-# fig = plt.figure(figsize=(5, 3))
-# # n = 0
-# # param_values = [Kmax_range[idx[n]], Ku_range[idy[n]], Vhalf_range[idz[n]]]
-# # param_dict = {param_names[i]: param_values[i] for i in range(3)}
-
-# sim.set_drug_parameters('dofetilide')
-# # sim.set_parameters(param_dict)
-# dimless_conc = [0]
-# sweep_num = 2
-
-# for d in dimless_conc:
-#     sim.update_initial_state(paces=0)
-#     # sim.set_dimless_conc(d)
-#     sim.set_conc(0)
-#     log = sim.simulate(prepace=0, save_signal=sweep_num,
-#                        log_var=[sim.time_key, sim.ikr_key],
-#                     #    log_times=log_times,
-#                        reset=False)
-
-#     plot_log = []
-#     for s in range(sweep_num):
-#         plot_log.extend(list(log[sim.ikr_key, s] /
-#                              control_log_win[sim.ikr_key]))
-#     plt.plot(plot_log)
-# fig.savefig(os.path.join(fig_dir, 'syn-data-full-test.pdf'),
-#             bbox_inches='tight')
-
 fig = plt.figure(figsize=(7, 3))
 n = 0
 param_values = [Kmax_range[idx[n]], Ku_range[idy[n]], Vhalf_range[idz[n]]]
@@ -157,14 +130,6 @@ for d in dimless_conc:
                         log_var=[sim.time_key, sim.ikr_key],
                         log_times=log_times,
                         reset=False)
-
-    # plot_log = []
-    # for s in range(sweep_num):
-    #     plot_log.extend(list(log[sim.ikr_key, s]))  # /
-                                # control_log_win[sim.ikr_key]))
-    # print(min(plot_log), max(plot_log))
     plt.plot(log[sim.ikr_key])
-    # plt.plot()
-plt.ylim((0, 0.05))
 fig.savefig(os.path.join(fig_dir, 'syn-data-partial.pdf'),
             bbox_inches='tight')
