@@ -14,7 +14,8 @@ def IKrmodel_mmt(model):
     """
     IKrmodel_dir = os.path.join(modelling.MAIN_DIR, 'models', 'IKr_models')
     filenames = {
-        'Li-SD': 'Li-SD.mmt'}
+        'Li-SD': 'Li-SD.mmt',
+        'Li-D': 'Li-D.mmt'}
 
     return os.path.join(IKrmodel_dir, filenames[model])
 
@@ -65,11 +66,13 @@ class ModelSimController(object):
         self.model = myokit.load_model(IKrmodel_mmt(model_name))
         if model_name == 'Li-SD':
             self.param_names = ['Kmax', 'Ku', 'halfmax', 'n', 'Vhalf']
+        elif model_name == 'Li-D':
+            self.param_names = ['Kb', 'Ku', 'halfmax', 'n']
 
         # parameters
         self._parameters = {}
 
-        if protocol_name in ['ramp', 'staircase']:
+        if protocol_name in ['ramp']:  # , 'staircase']:
             self.set_ramp_protocol(protocol_name)
 
         self.sim = myokit.Simulation(self.model)
