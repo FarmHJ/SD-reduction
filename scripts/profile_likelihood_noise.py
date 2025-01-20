@@ -10,20 +10,21 @@ import modelling
 # Define model and protocol
 model = 'Li-SD'
 protocol = 'Milnes'
+prot_mode = 'partial'
 results_dir = os.path.join(modelling.PARAM_DIR, model, protocol,
                            'profile_likelihood')
 
 # Define list of drugs (for ground truth parameter), parameter, their
 # exploration range and dimensionless concentration range
 drug_list = ['dofetilide', 'cisapride', 'verapamil']
-param_names = ['Kmax', 'Ku', 'Vhalf', 'Kt']
+param_names = ['Kmax', 'Ku', 'Vhalf']
 param_interest = ['Kmax', 'Ku', 'Vhalf']
 grid = 20
 ranges = {
-    'Kmax': 10**np.linspace(0, 8, grid),
-    'Ku': 10**np.linspace(np.log10(1.8e-5), 0, grid),
-    'Vhalf': np.linspace(-200, -1, grid),
-    'Kt': 10**np.linspace(-5, 8, grid)}
+    'Kmax': 10**np.linspace(0, 10, grid + 8),
+    'Ku': 10**np.linspace(np.log10(1.8e-6), 0, grid + 8),
+    'Vhalf': np.concatenate((np.linspace(-240, -1, grid + 5), np.arange(-0.75, 0, 0.25))),
+    'Kt': 10**np.linspace(-5, 8, grid + 8)}
 dimless_conc = np.array([10 ** i for i in np.linspace(-8, np.log10(0.65), 4)])
 
 # Extension to grid
@@ -111,11 +112,14 @@ transform_dict = {'Kmax': pints.LogTransformation(1),
 
 # Define time period of interest within the protocol (for 10 pulses)
 sweep_num = 10
-prot_start, prot_period, _ = modelling.simulation.protocol_period(protocol)
+_, prot_length, _ = modelling.simulation.protocol_period(protocol, mode='full')
+
+prot_start, prot_period, _ = modelling.simulation.protocol_period(
+    protocol, mode=prot_mode)
 general_win = np.arange(prot_start, prot_start + prot_period, 10)
 log_times = []
 for i in range(sweep_num):
-    log_times.extend(general_win + 25e3 * i)
+    log_times.extend(general_win + prot_length * i)
 
 # Load control data with 10ms time step
 control_log_file = os.path.join(modelling.PARAM_DIR, 'control_states',
@@ -126,10 +130,10 @@ control_log_win = control_log.trim(prot_start, prot_start + prot_period)
 sim = modelling.ModelSimController(model, protocol)
 sim.load_control_state()
 
-data_dir = os.path.join(modelling.PARAM_DIR, model, protocol,
-                        'syn_data')
-control_log_win_noise = myokit.DataLog.load_csv(os.path.join(
-    data_dir, f'control_log_{protocol}_noise_trimmed.csv'))
+# data_dir = os.path.join(modelling.PARAM_DIR, model, protocol,
+#                         'syn_data')
+# control_log_win_noise = myokit.DataLog.load_csv(os.path.join(
+#     data_dir, f'control_log_{protocol}_noise_scale5_trimmed.csv'))
 
 np.random.seed(0)
 params = pd.read_csv(os.path.join(modelling.PARAM_DIR, f'{model}.csv'),
@@ -154,7 +158,7 @@ for drug in drug_list:
                                log_times=log_times,
                                log_var=[sim.time_key, sim.ikr_key],
                                reset=False)
-        ref_log = sim.add_noise(ref_log, modelling.noise_level * 1e3)
+        # ref_log = sim.add_noise(ref_log, modelling.noise_level * 1e3)
         # 1e3 to adjust for order of magnitude
 
         # Compute and compile fractional block data
@@ -202,7 +206,7 @@ for drug in drug_list:
                                            boundaries=boundaries,
                                            transformation=transform,
                                            method=pints.CMAES)
-        # opt.set_log_to_screen(False)
+        opt.set_log_to_screen(False)
         # opt.set_max_iterations(5)
         opt.set_parallel(True)
         opt_param_main, s = opt.run()
@@ -256,7 +260,7 @@ for drug in drug_list:
                                                boundaries=boundaries,
                                                transformation=transform,
                                                method=pints.CMAES)
-            # opt.set_log_to_screen(False)
+            opt.set_log_to_screen(False)
             # opt.set_max_iterations(5)
             opt.set_parallel(True)
             opt_param, s = opt.run()
@@ -300,7 +304,7 @@ for drug in drug_list:
                                                boundaries=boundaries,
                                                transformation=transform,
                                                method=pints.CMAES)
-            # opt.set_log_to_screen(False)
+            opt.set_log_to_screen(False)
             # opt.set_max_iterations(5)
             opt.set_parallel(True)
             opt_param, s = opt.run()
@@ -314,8 +318,8 @@ for drug in drug_list:
         profile_likelihood[p] = param_list
         profile_likelihood[f'likelihood_{p}'] = error_list
 
-    print(profile_likelihood)
+    # print(profile_likelihood)
     # Save profile likelihood
     pd.DataFrame.from_dict(profile_likelihood).to_csv(
         os.path.join(results_dir,
-                     f'profilelikelihood_{drug}_Milnes_exp_noise.csv'))
+                     f'profilelikelihood_{drug}_{protocol}_{prot_mode}.csv'))
