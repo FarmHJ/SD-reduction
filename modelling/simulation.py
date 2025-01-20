@@ -31,13 +31,24 @@ def get_protocol(prot_name):
     return myokit.load_protocol(os.path.join(prot_dir, f'{prot_name}.mmt'))
 
 
-def protocol_period(prot_name):
+def protocol_period(prot_name, mode='partial'):
     # (protocol start time, protocol period of interest,
     # protocol time delay for plot)
+    # the delay for plot is to remove peak
     prot_time = {
-        'Milnes': (1000 + 100, 10000 - 100, 70)}  # remove peak
+        'partial':
+            {'Milnes': (1000 + 100, 10000 - 100, 70),
+             'step': (650 + 10, 500 - 10, 10),
+             'ramp': (50 + 10, 596, 10),
+             'staircase': (3400 + 10, 19 * 500 - 10, 10)},
+        'full':
+            {'Milnes': (0, 25e3, 0),
+             'step': (0, 1350, 0),
+             'ramp': (0, 746, 0),
+             'staircase': (0, 15400, 0)}
+        }
 
-    return prot_time[prot_name]
+    return prot_time[mode][prot_name]
 
 
 class ModelSimController(object):
@@ -255,14 +266,17 @@ class ModelSimController(object):
 
         return log
 
-    def add_noise(self, log, noise_std):
+    def add_noise(self, log, noise_std, scale=1):
         pulses = len(log.keys_like(self.ikr_key))
 
         if pulses == 0:
+            log[self.ikr_key] = np.array(log[self.ikr_key]) * scale
             log[self.ikr_key] += np.random.normal(loc=0, scale=noise_std,
                                                   size=log.length())
+
         else:
             for i in range(pulses):
+                log[self.ikr_key, i] = log[self.ikr_key, i] * scale
                 log[self.ikr_key, i] += np.random.normal(
                     loc=0, scale=noise_std, size=log.length())
 
