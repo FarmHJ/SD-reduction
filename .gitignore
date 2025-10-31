@@ -82,3 +82,4 @@ venv.bak/
 
 # Additional folders# Data, results and figures
 check/
+scripts/side_scripts/
